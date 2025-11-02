@@ -5,20 +5,24 @@ from routes import auth
 
 app = FastAPI(title="MapTrack API", version="0.1.0")
 
+# Подключение БД и событий
 attach_db_events(app)
 
+# Настройка CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-    "http://localhost:3000",
-    "http://127.0.0.1:3000"
-    ],  # 👈 Укажи свой фронт
-    allow_credentials=True,                   # 👈 обязательно для cookie
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost",
+    ],
+    allow_credentials=True,  # 👈 обязательно для передачи cookie (refresh_token)
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(auth.router, prefix="/auth")
+# Подключаем роуты
+app.include_router(auth.router)
 
 @app.get("/")
 def root():
