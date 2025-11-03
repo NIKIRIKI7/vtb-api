@@ -1,13 +1,13 @@
-# auth.py
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, Depends, HTTPException, status, Cookie, Response
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, constr
-from datetime import datetime
+from sqlalchemy import select
 from passlib.context import CryptContext
-import hashlib
+from datetime import datetime, timedelta
 
+from utils.jwt import create_access_token, create_refresh_token, verify_token
 from utils.validation import check_validation
-from utils.jwt import create_access_token
 from db.models import users
 from db.db import database
 
@@ -15,20 +15,23 @@ from db.db import database
 router = APIRouter(prefix="/auth", tags=["Auth"])
 pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# стандартная схема для OAuth2 password flow
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 # ==========================
-# Утилиты для паролей
+# Утилиты
 # ==========================
 def hash_password(password: str) -> str:
+    """Хэширует пароль с использованием bcrypt"""
     return pwd_ctx.hash(password)
 
 def verify_password(password: str, hashed: str) -> bool:
+    """Проверяет соответствие пароля хэшу"""
     return pwd_ctx.verify(password, hashed)
 
 
-
 # ==========================
-# Pydantic схемы
+# Pydantic-схемы
 # ==========================
 class RegisterUserSchema(BaseModel):
     email: EmailStr
@@ -44,18 +47,14 @@ class RegisterUserSchema(BaseModel):
     is_admin: bool = False
     is_blocked: bool = False
 
-class UserOut(BaseModel):
-    id: int
-    email: EmailStr
-
 
 # ==========================
-# Регистрация
+# Регистрация нового пользователя
 # ==========================
-@router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_user(data: RegisterUserSchema):
-    """Регистрирует нового пользователя и выдает JWT в cookie"""
-    
+    """Регистрирует нового пользователя и выдает access+refresh токены"""
+
     is_valid, error = await check_validation(data)
     if not is_valid:
         raise HTTPException(status_code=400, detail=error)
@@ -74,23 +73,108 @@ async def register_user(data: RegisterUserSchema):
         premium=data.premium,
         premium_expiry=data.premium_expiry,
         is_admin=data.is_admin,
-        is_blocked=data.is_blocked
+        is_blocked=data.is_blocked,
+        created_at=datetime.utcnow(),
+        last_login=None
     )
     user_id = await database.execute(query)
 
-    token = create_access_token({"sub": data.email})
+    access_token = create_access_token({"sub": data.email}, timedelta(minutes=1))
+    refresh_token = create_refresh_token({"sub": data.email})
 
     response = JSONResponse(
         status_code=status.HTTP_201_CREATED,
-        content={"id": user_id, "email": data.email, "message": "Регистрация успешна"}
+        content={
+            "id": user_id,
+            "email": data.email,
+            "message": "Регистрация прошла успешно 🎉"
+        },
+    )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,  # ⚠️ на dev можно False, на проде только True
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,  # 7 дней
+    )
+
+    return response
+
+
+# ==========================
+#  POST /auth/token — выдача access и refresh
+# ==========================
+@router.post("/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    query = select(users).where(users.c.email == form_data.username)
+    user = await database.fetch_one(query)
+    if not user or not pwd_ctx.verify(form_data.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Неверный email или пароль")
+
+    if user.is_blocked:
+        raise HTTPException(status_code=403, detail="Пользователь заблокирован")
+
+    access_token = create_access_token({"sub": user.email},  timedelta(minutes=1))
+    refresh_token = create_refresh_token({"sub": user.email})
+
+    response = JSONResponse(
+        {"access_token": access_token, "token_type": "bearer"},
+        status_code=status.HTTP_200_OK,
     )
     response.set_cookie(
-        key="access_token",
-        value=token,
+        key="refresh_token",
+        value=refresh_token,
         httponly=True,
-        secure=False,  
+        secure=True,
         samesite="lax",
-        path="/",
-        max_age=60 * 60 * 24 
+        max_age=60 * 60 * 24 * 7,
     )
     return response
+
+
+# ==========================
+#  POST /auth/refresh — обновление access_token
+# ==========================
+@router.post("/refresh")
+async def refresh_token(refresh_token: str | None = Cookie(None)):
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="Refresh token отсутствует")
+
+    payload = verify_token(refresh_token, token_type="refresh")
+    if not payload:
+        raise HTTPException(status_code=401, detail="Refresh token недействителен")
+
+    new_access_token = create_access_token({"sub": payload["sub"]}, timedelta(minutes=1))
+    return {"access_token": new_access_token, "token_type": "bearer"}
+
+
+# ==========================
+#  GET /auth/me — защищённый ресурс
+# ==========================
+@router.get("/me")
+async def read_users_me(token: str = Depends(oauth2_scheme)):
+    payload = verify_token(token, token_type="access")
+    if not payload:
+        raise HTTPException(status_code=401, detail="Недействительный токен")
+
+    query = select(users).where(users.c.email == payload["sub"])
+    user = await database.fetch_one(query)
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    return {
+        "email": user.email,
+        "first_name": user.first_name,
+        "type_account": user.type_account,
+        "premium": user.premium,
+    }
+
+# ==========================
+#  POST /auth/logout — выход пользователя
+# ==========================
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie("refresh_token")
+    return {"message": "Вы успешно вышли"}
