@@ -79,7 +79,7 @@ async def register_user(data: RegisterUserSchema):
     )
     user_id = await database.execute(query)
 
-    access_token = create_access_token({"sub": data.email}, timedelta(minutes=1))
+    access_token = create_access_token({"sub": data.email})
     refresh_token = create_refresh_token({"sub": data.email})
 
     response = JSONResponse(
@@ -116,7 +116,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     if user.is_blocked:
         raise HTTPException(status_code=403, detail="Пользователь заблокирован")
 
-    access_token = create_access_token({"sub": user.email},  timedelta(minutes=1))
+    access_token = create_access_token({"sub": user.email})
     refresh_token = create_refresh_token({"sub": user.email})
 
     response = JSONResponse(
@@ -146,7 +146,7 @@ async def refresh_token(refresh_token: str | None = Cookie(None)):
     if not payload:
         raise HTTPException(status_code=401, detail="Refresh token недействителен")
 
-    new_access_token = create_access_token({"sub": payload["sub"]}, timedelta(minutes=1))
+    new_access_token = create_access_token({"sub": payload["sub"]}, timedelta(minutes=30))
     return {"access_token": new_access_token, "token_type": "bearer"}
 
 
