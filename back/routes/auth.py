@@ -99,7 +99,14 @@ async def register_user(data: RegisterUserSchema):
         samesite="lax",
         max_age=60 * 60 * 24 * 7,  # 7 дней
     )
-
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=60 * 30,  # 30 минут
+    )
     return response
 
 
@@ -131,6 +138,14 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         samesite="lax",
         max_age=60 * 60 * 24 * 7,
     )
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=60 * 30,  # 30 минут
+    )
     return response
 
 
@@ -147,7 +162,21 @@ async def refresh_token(refresh_token: str | None = Cookie(None)):
         raise HTTPException(status_code=401, detail="Refresh token недействителен")
 
     new_access_token = create_access_token({"sub": payload["sub"]}, timedelta(minutes=30))
-    return {"access_token": new_access_token, "token_type": "bearer"}
+
+    response = JSONResponse(
+        content={"message": "Access token обновлён ✅"}
+    )
+
+    response.set_cookie(
+        key="access_token",
+        value=new_access_token,
+        httponly=True,   # не доступен из JS
+        secure=True,     # на проде обязательно True
+        samesite="lax",
+        max_age=60 * 30, # 30 минут
+    )
+
+    return response
 
 
 # ==========================
@@ -177,4 +206,5 @@ async def read_users_me(token: str = Depends(oauth2_scheme)):
 @router.post("/logout")
 async def logout(response: Response):
     response.delete_cookie("refresh_token")
+    response.delete_cookie("access_token")
     return {"message": "Вы успешно вышли"}

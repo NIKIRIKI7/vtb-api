@@ -25,4 +25,5 @@ services:
     volumes:
       - ./front:/app
       - /app/node_modules
-    command: sh -c "pnpm install --frozen-lockfile && pnpm run dev --host"
+    command: sh -c "npm install --legacy-peer-deps && npm run dev -- --host"
+

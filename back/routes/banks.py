@@ -167,10 +167,10 @@ async def connect_bank(bank: str, user=Depends(get_current_user)):
 
     body = {
         "client_id": f"{CLIENT_ID}-{user.id}",
-        "permissions": ["ReadAccountsDetail", "ReadBalances"],
+        "permissions": ["ReadAccountsDetail", "ReadBalances","ReadTransactionsDetail"],
         "reason": "Агрегация счетов для MapTrack",
         "requesting_bank": CLIENT_ID,
-        "requesting_bank_name": "Team 239 App",
+        "requesting_bank_name": "MapTrack",
     }
 
     async with httpx.AsyncClient(verify=False) as client:
@@ -190,7 +190,7 @@ async def connect_bank(bank: str, user=Depends(get_current_user)):
             bank_name=bank,
             req_id=req_id,
             consent_id=consent_id,
-            client_id=f"{CLIENT_ID}",
+            client_id=f"{CLIENT_ID}-{user.id}",
             status=status,
         )
     )
