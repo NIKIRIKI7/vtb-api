@@ -45,9 +45,10 @@
                   <p class="text-sm text-muted-foreground">{{ account.accountId }}</p>
                 </div>
                 <div class="text-right">
-                  <p class="font-bold text-lg">
+                  <p v-if="account.balance && account.balance.amount" class="font-bold text-lg">
                     {{ formatCurrency(account.balance.amount.amount, account.balance.amount.currency) }}
                   </p>
+                  <p v-else class="font-semibold text-lg text-muted-foreground">--</p>
                   <RouterLink
                     :to="`/transactions?accountId=${account.accountId}&bank=${bank.name}`"
                     class="text-sm text-primary hover:underline mt-1 inline-block"
@@ -116,14 +117,19 @@ const handleConnect = async (bankName: BankName) => {
 
 /**
  * Форматирует числовое значение в строку валюты.
- * @param {string} amount - Сумма в виде строки.
+ * @param {string | number | undefined | null} amount - Сумма в виде строки или числа.
  * @param {string} currency - Код валюты (например, 'RUB').
- * @returns {string} Отформатированная строка валюты.
+ * @returns {string} Отформатированная строка валюты или прочерк.
  */
-const formatCurrency = (amount: string, currency: string) => {
+const formatCurrency = (amount: string | number | undefined | null, currency: string) => {
+  const numericAmount = Number(amount);
+  if (isNaN(numericAmount)) {
+    console.warn(`[formatCurrency] Invalid amount received: ${amount}`);
+    return '--';
+  }
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
     currency,
-  }).format(Number(amount))
+  }).format(numericAmount)
 }
 </script>

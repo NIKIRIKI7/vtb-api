@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import AccountApi from '@/api/AccountApi'
-import type { Bank, BankName, TransactionData } from '@/entities/account/types'
+import type { Bank, BankName, TransactionData, Account } from '@/entities/account/types'
 import type { Transaction } from '@/entities/transaction/types'
 import { parseApiError } from '@/composables/parseApiError'
 
@@ -109,11 +109,13 @@ export const useAccountStore = defineStore('accounts', () => {
 
     try {
       const { data } = await AccountApi.getAccounts(bankName)
-      banks.value[bankName].accounts = data.accounts
-      console.log(`[Store] Для банка ${bankName} загружено ${data.accounts.length} счетов.`)
+      // Дополнительная проверка структуры данных для предотвращения ошибок
+      const validAccounts = data.accounts ? data.accounts.filter(acc => acc && typeof acc === 'object') : [];
+      banks.value[bankName].accounts = validAccounts as Account[];
+      console.log(`[Store] Для банка ${bankName} загружено ${validAccounts.length} счетов.`)
     } catch (e) {
       error.value = parseApiError(e)
-      console.error(`[Store] Ошибка загрузки счетов для ${bankName}:`, error.value)
+      console.error(`[Store] Ошибка загрузки счетов для банка ${bankName}:`, error.value, e)
     } finally {
       banks.value[bankName].isLoadingAccounts = false
     }
