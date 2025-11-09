@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Cookie, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Cookie, Response,Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, constr
@@ -79,7 +79,7 @@ async def register_user(data: RegisterUserSchema):
     )
     user_id = await database.execute(query)
 
-    access_token = create_access_token({"sub": data.email}, timedelta(minutes=1))
+    access_token = create_access_token({"sub": data.email})
     refresh_token = create_refresh_token({"sub": data.email})
 
     response = JSONResponse(
@@ -99,7 +99,14 @@ async def register_user(data: RegisterUserSchema):
         samesite="lax",
         max_age=60 * 60 * 24 * 7,  # 7 дней
     )
-
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=60 * 30,  # 30 минут
+    )
     return response
 
 
@@ -116,7 +123,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     if user.is_blocked:
         raise HTTPException(status_code=403, detail="Пользователь заблокирован")
 
-    access_token = create_access_token({"sub": user.email},  timedelta(minutes=1))
+    access_token = create_access_token({"sub": user.email})
     refresh_token = create_refresh_token({"sub": user.email})
 
     response = JSONResponse(
@@ -130,6 +137,14 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         secure=True,
         samesite="lax",
         max_age=60 * 60 * 24 * 7,
+    )
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=60 * 30,  # 30 минут
     )
     return response
 
@@ -146,19 +161,40 @@ async def refresh_token(refresh_token: str | None = Cookie(None)):
     if not payload:
         raise HTTPException(status_code=401, detail="Refresh token недействителен")
 
-    new_access_token = create_access_token({"sub": payload["sub"]}, timedelta(minutes=1))
-    return {"access_token": new_access_token, "token_type": "bearer"}
+    new_access_token = create_access_token({"sub": payload["sub"]}, timedelta(minutes=30))
+
+    response = JSONResponse(
+        content={"message": "Access token обновлён ✅"}
+    )
+
+    response.set_cookie(
+        key="access_token",
+        value=new_access_token,
+        httponly=True,   # не доступен из JS
+        secure=True,     # на проде обязательно True
+        samesite="lax",
+        max_age=60 * 30, # 30 минут
+    )
+
+    return response
 
 
 # ==========================
 #  GET /auth/me — защищённый ресурс
 # ==========================
 @router.get("/me")
-async def read_users_me(token: str = Depends(oauth2_scheme)):
+async def read_users_me(request: Request):
+    # Берём токен из куки
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=402, detail="Токен не найден в куках")
+
+    # Проверяем токен
     payload = verify_token(token, token_type="access")
     if not payload:
         raise HTTPException(status_code=401, detail="Недействительный токен")
 
+    # Ищем пользователя
     query = select(users).where(users.c.email == payload["sub"])
     user = await database.fetch_one(query)
     if not user:
@@ -177,4 +213,5 @@ async def read_users_me(token: str = Depends(oauth2_scheme)):
 @router.post("/logout")
 async def logout(response: Response):
     response.delete_cookie("refresh_token")
+    response.delete_cookie("access_token")
     return {"message": "Вы успешно вышли"}

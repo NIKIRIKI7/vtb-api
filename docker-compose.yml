@@ -11,3 +11,19 @@ services:
     volumes:
       - ./back:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  front:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    container_name: vtb-api-front
+    ports:
+      - "5173:5173"
+    environment:
+      - HOST=0.0.0.0
+      - CI=true
+    volumes:
+      - ./front:/app
+      - /app/node_modules
+    command: sh -c "npm install --legacy-peer-deps && npm run dev -- --host"
+

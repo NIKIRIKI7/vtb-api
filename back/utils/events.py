@@ -11,9 +11,9 @@ def attach_db_events(app: FastAPI):
         # Создаём таблицы, если их нет
         async with engine.begin() as conn:
             await conn.run_sync(metadata.create_all)
-        print("✅ Database connected and tables ensured.")
+        print("Database connected and tables ensured.")
 
     @app.on_event("shutdown")
     async def shutdown():
         await database.disconnect()
-        print("🧹 Database disconnected.")
+        print("Database disconnected.")
