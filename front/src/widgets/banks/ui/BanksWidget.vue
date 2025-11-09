@@ -69,13 +69,13 @@ const goToBank = (index: number) => {
         class="bg-slate-900 text-primary-foreground border-slate-700 shadow-lg relative overflow-hidden"
       >
         <CardHeader class="flex flex-row items-center justify-between pb-2">
-          <CardTitle class="text-lg font-medium">Мой Баланс</CardTitle>
-          <span v-if="currentBank" class="text-sm font-semibold capitalize caret-amber-200">
+          <CardTitle class="text-lg font-medium text-white">Мой Баланс</CardTitle>
+          <span v-if="currentBank" class="text-sm font-semibold capitalize caret-amber-200 text-white">
             {{ currentBank.name.replace('bank', ' Bank') }}
           </span>
         </CardHeader>
         <CardContent class="text-left">
-          <p class="text-4xl font-bold tracking-tight caret-amber-200">
+          <p class="text-4xl font-bold tracking-tight caret-amber-200 text-white">
             {{ formatCurrency(currentBankBalance, 'RUB') }}
           </p>
           <div class="mt-6 grid grid-cols-4 gap-2 text-center">
@@ -87,7 +87,7 @@ const goToBank = (index: number) => {
               >
                 <CreditCardIcon class="h-6 w-6" />
               </Button>
-              <span class="text-xs caret-amber-200">Оплатить</span>
+              <span class="text-xs caret-amber-200 text-white">Оплатить</span>
             </div>
             <div class="flex flex-col items-center gap-1">
               <Button
@@ -97,7 +97,7 @@ const goToBank = (index: number) => {
               >
                 <ArrowRightLeft class="h-6 w-6" />
               </Button>
-              <span class="text-xs caret-amber-200">Перевести</span>
+              <span class="text-xs caret-amber-200 text-white">Перевести</span>
             </div>
             <div class="flex flex-col items-center gap-1">
               <a
@@ -112,7 +112,7 @@ const goToBank = (index: number) => {
                   <History class="h-6 w-6" />
                 </Button>
               </a>
-              <span class="text-xs caret-amber-200">История</span>
+              <span class="text-xs caret-amber-200 text-white">История</span>
             </div>
             <div class="flex flex-col items-center gap-1">
               <Button
@@ -122,7 +122,7 @@ const goToBank = (index: number) => {
               >
                 <Landmark class="h-6 w-6" />
               </Button>
-              <span class="text-xs caret-amber-200">Вклады</span>
+              <span class="text-xs caret-amber-200 text-white">Вклады</span>
             </div>
           </div>
         </CardContent>
@@ -167,11 +167,11 @@ const goToBank = (index: number) => {
     <div v-else>
       <Card class="bg-slate-900 text-primary-foreground border-slate-700 shadow-lg">
         <CardHeader>
-          <CardTitle class="text-lg font-medium">Мой Баланс</CardTitle>
+          <CardTitle class="text-lg font-medium text-white">Мой Баланс</CardTitle>
         </CardHeader>
         <CardContent class="text-center pb-4">
           <div class="h-16 flex items-center justify-center">
-            <p v-if="accountStore.isLoadingStatuses">Загрузка...</p>
+            <p v-if="accountStore.isLoadingStatuses" class="text-white">Загрузка...</p>
             <p v-else class="text-muted-foreground text-slate-400">Нет подключенных счетов</p>
           </div>
         </CardContent>

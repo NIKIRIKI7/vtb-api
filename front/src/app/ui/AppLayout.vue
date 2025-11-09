@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-background flex flex-col">
     <!-- Header -->
     <header
-      class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 bg-white"
     >
       <div class="container flex h-16 items-center px-4">
         <!-- Левая сторона: Название (для десктопа) / Бургер (для мобильных) -->
