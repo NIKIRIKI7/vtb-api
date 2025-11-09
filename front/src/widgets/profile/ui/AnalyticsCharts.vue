@@ -5,10 +5,7 @@
     </CardHeader>
     <CardContent>
       <!-- Пустое состояние -->
-      <div
-        v-if="!hasData"
-        class="text-center py-12 text-muted-foreground"
-      >
+      <div v-if="!hasData" class="text-center py-12 text-muted-foreground">
         <PieChart class="h-16 w-16 mx-auto mb-4 opacity-50" />
         <p>Недостаточно данных для анализа</p>
       </div>
@@ -56,24 +53,24 @@
               :key="category.name"
               class="flex items-center justify-between"
             >
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 min-w-0 flex-1">
                 <div
-                  class="w-3 h-3 rounded-full"
+                  class="w-3 h-3 rounded-full shrink-0"
                   :style="{ backgroundColor: getCategoryColor(category.name) }"
                 />
-                <span class="text-sm">{{ category.name }}</span>
+                <span class="text-sm truncate">{{ category.name }}</span>
               </div>
-              <div class="flex items-center gap-2">
-                <div class="w-20 bg-muted rounded-full h-2">
+              <div class="flex items-center gap-2 ml-3">
+                <div class="w-20 bg-muted rounded-full h-2 shrink-0">
                   <div
                     class="h-2 rounded-full transition-all duration-500"
                     :style="{
                       width: `${category.percentage}%`,
-                      backgroundColor: getCategoryColor(category.name)
+                      backgroundColor: getCategoryColor(category.name),
                     }"
                   />
                 </div>
-                <span class="text-sm font-medium w-16 text-right">
+                <span class="text-sm font-medium w-20 text-right shrink-0">
                   {{ formatCurrency(category.amount) }}
                 </span>
               </div>
@@ -103,15 +100,15 @@ const props = defineProps<Props>()
 
 // Цвета для категорий
 const categoryColors = {
-  'Продукты': '#FF6B6B',
-  'Рестораны': '#4ECDC4',
-  'Транспорт': '#45B7D1',
-  'Связь': '#96CEB4',
-  'ЖКХ': '#FFEAA7',
-  'Развлечения': '#DDA0DD',
-  'Здоровье': '#98D8C8',
-  'Одежда': '#F7DC6F',
-  'Прочее': '#BB8FCE'
+  Продукты: '#FF6B6B',
+  Рестораны: '#4ECDC4',
+  Транспорт: '#45B7D1',
+  Связь: '#96CEB4',
+  ЖКХ: '#FFEAA7',
+  Развлечения: '#DDA0DD',
+  Здоровье: '#98D8C8',
+  Одежда: '#F7DC6F',
+  Прочее: '#BB8FCE',
 }
 
 const getCategoryColor = (category: string) => {
@@ -120,11 +117,11 @@ const getCategoryColor = (category: string) => {
 
 // Аналитика расходов
 const expenseTransactions = computed(() => {
-  return props.transactions.filter(t => t.creditDebitIndicator === 'Debit')
+  return props.transactions.filter((t) => t.creditDebitIndicator === 'Debit')
 })
 
 const incomeTransactions = computed(() => {
-  return props.transactions.filter(t => t.creditDebitIndicator === 'Credit')
+  return props.transactions.filter((t) => t.creditDebitIndicator === 'Credit')
 })
 
 const totalExpenses = computed(() => {
@@ -139,7 +136,7 @@ const totalIncome = computed(() => {
 const categorizedExpenses = computed(() => {
   const categories: { [key: string]: number } = {}
 
-  expenseTransactions.value.forEach(transaction => {
+  expenseTransactions.value.forEach((transaction) => {
     const category = categorizeTransaction(transaction.transactionInformation)
     const amount = parseFloat(transaction.amount.amount)
 
@@ -158,9 +155,9 @@ const topCategories = computed(() => {
     .map(([name, amount]) => ({ name, amount }))
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5)
-    .map(category => ({
+    .map((category) => ({
       ...category,
-      percentage: (category.amount / totalExpenses.value) * 100
+      percentage: (category.amount / totalExpenses.value) * 100,
     }))
 })
 
@@ -169,7 +166,7 @@ const pieChartData = computed(() => {
   const categories = categorizedExpenses.value
   const labels = Object.keys(categories)
   const data = Object.values(categories)
-  const backgroundColors = labels.map(label => getCategoryColor(label))
+  const backgroundColors = labels.map((label) => getCategoryColor(label))
 
   return {
     labels,
@@ -177,10 +174,10 @@ const pieChartData = computed(() => {
       {
         data,
         backgroundColor: backgroundColors,
-        borderColor: backgroundColors.map(color => color + 'DD'),
-        borderWidth: 2
-      }
-    ]
+        borderColor: backgroundColors.map((color) => color + 'DD'),
+        borderWidth: 2,
+      },
+    ],
   }
 })
 
@@ -188,7 +185,7 @@ const pieChartData = computed(() => {
 const lineChartData = computed(() => {
   const monthlyData: { [key: string]: number } = {}
 
-  expenseTransactions.value.forEach(transaction => {
+  expenseTransactions.value.forEach((transaction) => {
     const date = new Date(transaction.bookingDateTime)
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 
@@ -201,15 +198,15 @@ const lineChartData = computed(() => {
 
   // Сортируем по дате
   const sortedMonths = Object.keys(monthlyData).sort()
-  const labels = sortedMonths.map(month => {
+  const labels = sortedMonths.map((month) => {
     const [year, monthNum] = month.split('-')
     return new Date(parseInt(year), parseInt(monthNum) - 1).toLocaleDateString('ru-RU', {
       month: 'short',
-      year: 'numeric'
+      year: 'numeric',
     })
   })
 
-  const data = sortedMonths.map(month => monthlyData[month])
+  const data = sortedMonths.map((month) => monthlyData[month])
 
   return {
     labels,
@@ -221,9 +218,9 @@ const lineChartData = computed(() => {
         backgroundColor: 'rgba(255, 107, 107, 0.1)',
         borderWidth: 2,
         fill: true,
-        tension: 0.4
-      }
-    ]
+        tension: 0.4,
+      },
+    ],
   }
 })
 
@@ -236,20 +233,50 @@ const categorizeTransaction = (description: string): string => {
 
   if (desc.includes('магазин') || desc.includes('супермаркет') || desc.includes('продукт'))
     return 'Продукты'
-  if (desc.includes('ресторан') || desc.includes('кафе') || desc.includes('столов') || desc.includes('еда'))
+  if (
+    desc.includes('ресторан') ||
+    desc.includes('кафе') ||
+    desc.includes('столов') ||
+    desc.includes('еда')
+  )
     return 'Рестораны'
-  if (desc.includes('транспорт') || desc.includes('такси') || desc.includes('метро') || desc.includes('автобус') || desc.includes('бензин'))
+  if (
+    desc.includes('транспорт') ||
+    desc.includes('такси') ||
+    desc.includes('метро') ||
+    desc.includes('автобус') ||
+    desc.includes('бензин')
+  )
     return 'Транспорт'
-  if (desc.includes('интернет') || desc.includes('связь') || desc.includes('телефон') || desc.includes('мобильн'))
+  if (
+    desc.includes('интернет') ||
+    desc.includes('связь') ||
+    desc.includes('телефон') ||
+    desc.includes('мобильн')
+  )
     return 'Связь'
-  if (desc.includes('коммунал') || desc.includes('квартплата') || desc.includes('электр') || desc.includes('вод'))
+  if (
+    desc.includes('коммунал') ||
+    desc.includes('квартплата') ||
+    desc.includes('электр') ||
+    desc.includes('вод')
+  )
     return 'ЖКХ'
-  if (desc.includes('развлеч') || desc.includes('кино') || desc.includes('театр') || desc.includes('концерт'))
+  if (
+    desc.includes('развлеч') ||
+    desc.includes('кино') ||
+    desc.includes('театр') ||
+    desc.includes('концерт')
+  )
     return 'Развлечения'
-  if (desc.includes('аптек') || desc.includes('больни') || desc.includes('врач') || desc.includes('медиц'))
+  if (
+    desc.includes('аптек') ||
+    desc.includes('больни') ||
+    desc.includes('врач') ||
+    desc.includes('медиц')
+  )
     return 'Здоровье'
-  if (desc.includes('одежд') || desc.includes('обув') || desc.includes('магазин'))
-    return 'Одежда'
+  if (desc.includes('одежд') || desc.includes('обув') || desc.includes('магазин')) return 'Одежда'
 
   return 'Прочее'
 }

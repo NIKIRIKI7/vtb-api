@@ -85,7 +85,7 @@
 
         <!-- Кнопка "Показать все" если транзакций больше 10 -->
         <div v-if="transactions.length > 10" class="text-center pt-2">
-          <Button variant="outline" size="sm" @click="$router.push('/transactions')">
+          <Button variant="outline" size="sm" @click="showAllTransactions">
             Показать все операции
           </Button>
         </div>
@@ -105,9 +105,14 @@ import { Badge } from '@/components/ui/badge'
 interface Props {
   transactions: Transaction[]
   loading: boolean
+  currentAccount?: {
+    accountId: string
+    bank: string
+    nickname?: string
+  }
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const router = useRouter()
 
@@ -130,5 +135,20 @@ const formatDate = (dateString: string) => {
     hour: '2-digit',
     minute: '2-digit'
   }).format(date)
+}
+
+const showAllTransactions = () => {
+  if (props.currentAccount) {
+    router.push({
+      path: '/transactions',
+      query: {
+        accountId: props.currentAccount.accountId,
+        bank: props.currentAccount.bank,
+        nickname: props.currentAccount.nickname || 'Основной счет'
+      }
+    })
+  } else {
+    router.push('/transactions')
+  }
 }
 </script>

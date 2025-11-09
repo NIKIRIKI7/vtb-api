@@ -6,7 +6,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, onUnmounted } from 'vue'
-import { Chart, registerables } from 'chart.js'
+import { Chart, registerables, type ChartOptions, type TooltipItem } from 'chart.js'
 
 Chart.register(...registerables)
 
@@ -20,7 +20,7 @@ interface Props {
       borderWidth: number
     }[]
   }
-  options?: any
+  options?: ChartOptions<'pie'>
 }
 
 const props = defineProps<Props>()
@@ -41,7 +41,7 @@ const defaultOptions = {
     },
     tooltip: {
       callbacks: {
-        label: function(context: any) {
+        label: function(context: TooltipItem<'pie'>) {
           const label = context.label || ''
           const value = context.parsed
           const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0)

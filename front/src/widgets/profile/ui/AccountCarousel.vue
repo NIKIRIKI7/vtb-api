@@ -52,11 +52,7 @@
         <!-- Баланс -->
         <div class="text-center">
           <p class="text-2xl font-bold">
-            {{ formatCurrency(
-            currentAccount?.balance?.amount?.amount || '--',
-            currentAccount?.balance?.amount?.currency || 'RUB'
-          )
-            }}
+            {{ formatCurrency(currentAccount) }}
           </p>
           <p class="text-sm text-muted-foreground mt-1">
             Текущий баланс
@@ -71,7 +67,7 @@
           size="sm"
           @click="prevAccount"
           :disabled="currentIndex === 0"
-          class="bg-white"
+          class="bg-white hover:bg-gray-50"
         >
           <ChevronLeft class="h-4 w-4" />
         </Button>
@@ -90,7 +86,7 @@
           size="sm"
           @click="nextAccount"
           :disabled="currentIndex === accounts.length - 1"
-          class="bg-white"
+          class="bg-white hover:bg-gray-50"
         >
           <ChevronRight class="h-4 w-4" />
         </Button>
@@ -146,17 +142,30 @@ const nextAccount = () => {
   }
 }
 
-const formatCurrency = (amount: string, currency: string) => {
-  const numericAmount = Number(amount)
+const formatCurrency = (account: any) => {
+  if (!account?.balance?.balance || !Array.isArray(account.balance.balance)) {
+    return '--'
+  }
+
+  const availableBalance = account.balance.balance.find((b: any) => b.type === 'InterimAvailable')
+  const bookedBalance = account.balance.balance.find((b: any) => b.type === 'InterimBooked')
+
+  const balance = availableBalance || bookedBalance
+
+  if (!balance?.amount?.amount || !balance?.amount?.currency) {
+    return '--'
+  }
+
+  const numericAmount = Number(balance.amount.amount)
   if (isNaN(numericAmount)) return '--'
 
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
-    currency,
+    currency: balance.amount.currency,
   }).format(numericAmount)
 }
-
 const formatAccountNumber = (accountId: string) => {
+  if (!accountId) return '--'
   if (accountId.length > 8) {
     return `...${accountId.slice(-4)}`
   }

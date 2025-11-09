@@ -1,14 +1,60 @@
-<!-- src/pages/profile/ui/ProfilePage.vue -->
 <template>
   <div class="min-h-screen bg-background py-6">
     <div class="container mx-auto px-4">
       <!-- Заголовок -->
       <div class="mb-8">
-        <h1 class="text-3xl font-bold">Профиль пользователя</h1>
-        <p class="text-muted-foreground mt-2">
-          Управление вашими счетами и финансами
-        </p>
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-3xl font-bold">Профиль пользователя</h1>
+            <p class="text-muted-foreground mt-2">Управление вашими счетами и финансами</p>
+          </div>
+          <div class="text-right">
+            <div class="flex items-center gap-3">
+              <div>
+                <p class="font-semibold text-lg">{{ authStore.user?.first_name }}</p>
+                <p class="text-sm text-muted-foreground">{{ authStore.user?.email }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <!-- Дополнительная информация о пользователе -->
+      <Card class="mb-6">
+        <CardHeader>
+          <CardTitle>Информация о профиле</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p class="text-sm text-muted-foreground">Тип аккаунта</p>
+              <p class="font-medium">{{ accountTypeText }}</p>
+            </div>
+            <div>
+              <p class="text-sm text-muted-foreground">Статус</p>
+              <p class="font-medium">
+                {{ authStore.user?.premium ? 'Премиум аккаунт' : 'Базовый аккаунт' }}
+              </p>
+            </div>
+            <div v-if="authStore.user?.company_name">
+              <p class="text-sm text-muted-foreground">Компания</p>
+              <p class="font-medium">{{ authStore.user.company_name }}</p>
+            </div>
+            <div v-if="authStore.user?.inn">
+              <p class="text-sm text-muted-foreground">ИНН</p>
+              <p class="font-medium">{{ authStore.user.inn }}</p>
+            </div>
+            <div v-if="authStore.user?.phone">
+              <p class="text-sm text-muted-foreground">Телефон</p>
+              <p class="font-medium">{{ authStore.user.phone }}</p>
+            </div>
+            <div v-if="authStore.user?.premium_expiry">
+              <p class="text-sm text-muted-foreground">Премиум до</p>
+              <p class="font-medium">{{ formatDate(authStore.user.premium_expiry) }}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <!-- Основная сетка -->
       <div v-if="!isLoading" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -31,19 +77,19 @@
           <TransactionsHistory
             :transactions="currentTransactions"
             :loading="loadingTransactions"
+            :current-account="currentAccountForTransactions"
           />
 
           <!-- Диаграммы аналитики -->
-          <AnalyticsCharts
-            :transactions="currentTransactions"
-            :account="selectedAccount"
-          />
+          <AnalyticsCharts :transactions="currentTransactions" :account="selectedAccount" />
         </div>
       </div>
 
       <!-- Состояние загрузки -->
       <div v-else class="text-center py-12">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"
+        ></div>
         <p class="text-muted-foreground">Загрузка данных профиля...</p>
       </div>
 
@@ -78,13 +124,14 @@ import AccountCarousel from '@/widgets/profile/ui/AccountCarousel.vue'
 import TransactionsHistory from '@/widgets/profile/ui/TransactionsHistory.vue'
 import AnalyticsCharts from '@/widgets/profile/ui/AnalyticsCharts.vue'
 import PromoCard from '@/widgets/promo/ui/PromoCards.vue'
-import type { Account } from '@/entities/account/types'
+import type { Account, BankName } from '@/entities/account/types'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const router = useRouter()
 const accountStore = useAccountStore()
 const authStore = useAuthStore()
 
-const selectedAccount = ref<Account & { bank: string } | null>(null)
+const selectedAccount = ref<(Account & { bank: string }) | null>(null)
 const loadingTransactions = ref(false)
 const isLoading = ref(true)
 const error = ref('')
@@ -92,12 +139,12 @@ const error = ref('')
 // Все счета из всех банков
 const accounts = computed(() => {
   const allAccounts: Array<Account & { bank: string }> = []
-  Object.values(accountStore.banks).forEach(bank => {
+  Object.values(accountStore.banks).forEach((bank) => {
     if (bank.status === 'connected' && bank.accounts.length > 0) {
-      bank.accounts.forEach(account => {
+      bank.accounts.forEach((account) => {
         allAccounts.push({
           ...account,
-          bank: bank.name
+          bank: bank.name,
         })
       })
     }
@@ -105,11 +152,40 @@ const accounts = computed(() => {
   return allAccounts
 })
 
-// Транзакции для выбранного счета
 const currentTransactions = computed(() => {
   if (!selectedAccount.value) return []
   return accountStore.transactions
 })
+
+const accountTypeText = computed(() => {
+  const type = authStore.user?.type_account
+  switch (type) {
+    case 0: return 'Физическое лицо'
+    case 1: return 'Юридическое лицо'
+    case 2: return 'Индивидуальный предприниматель'
+    default: return 'Неизвестный тип'
+  }
+})
+
+const currentAccountForTransactions = computed(() => {
+  if (!selectedAccount.value) return undefined
+
+  return {
+    accountId: selectedAccount.value.accountId,
+    bank: selectedAccount.value.bank,
+    nickname: selectedAccount.value.nickname
+  }
+})
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return '--'
+  const date = new Date(dateString)
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(date)
+}
 
 const handleAccountChange = async (account: Account & { bank: string }) => {
   selectedAccount.value = account
@@ -117,86 +193,69 @@ const handleAccountChange = async (account: Account & { bank: string }) => {
   error.value = ''
 
   try {
-    await accountStore.fetchTransactions(account.accountId, account.bank)
-  } catch (e: any) {
-    error.value = e.message || 'Ошибка загрузки транзакций'
+    const bankName = account.bank as BankName
+    if (['vbank', 'abank', 'sbank'].includes(bankName)) {
+      await accountStore.fetchTransactions(account.accountId, bankName)
+    } else {
+      throw new Error(`Неизвестный банк: ${account.bank}`)
+    }
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Ошибка загрузки транзакций'
     console.error('Error loading transactions:', e)
   } finally {
     loadingTransactions.value = false
   }
 }
 
-// Загрузка начальных данных
 const loadInitialData = async () => {
   isLoading.value = true
   error.value = ''
 
   try {
-    // Ждем инициализации аутентификации
     if (!authStore.isInitialized) {
       await authStore.initAuth()
     }
 
-    // Если пользователь не авторизован, редиректим
     if (!authStore.isAuthenticated) {
       await router.push('/login')
       return
     }
 
-    // Инициализируем accounts store если нужно
     if (!accountStore.isInitialized) {
       await accountStore.initializeAccounts()
     }
 
-    // Если счета уже есть в store, используем их
-    if (accounts.value.length > 0) {
+    if (accounts.value.length > 0 && accounts.value[0]) {
       selectedAccount.value = accounts.value[0]
       await handleAccountChange(accounts.value[0])
     } else {
-      // Если счетов нет, пробуем загрузить статусы банков
       await accountStore.fetchBankStatuses()
 
-      // После загрузки статусов проверяем счета снова
-      if (accounts.value.length > 0) {
+      if (accounts.value.length > 0 && accounts.value[0]) {
         selectedAccount.value = accounts.value[0]
         await handleAccountChange(accounts.value[0])
       }
     }
-  } catch (e: any) {
-    error.value = e.message || 'Ошибка загрузки данных профиля'
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Ошибка загрузки данных профиля'
     console.error('Error loading profile data:', e)
   } finally {
     isLoading.value = false
   }
 }
 
-// Инициализация
 onMounted(async () => {
   await loadInitialData()
 })
 
-// Следим за изменением банков и автоматически обновляем
-watch(
-  () => accountStore.banks,
-  (newBanks) => {
-    // Если данные загрузились и появились счета, выбираем первый
-    if (!isLoading.value && accounts.value.length > 0 && !selectedAccount.value) {
-      selectedAccount.value = accounts.value[0]
-      handleAccountChange(accounts.value[0])
-    }
-  },
-  { deep: true, immediate: true }
-)
-
-// Следим за изменением connected банков
 watch(
   () => accountStore.connectedBanks,
   (newConnectedBanks) => {
-    if (newConnectedBanks.length > 0 && accounts.value.length > 0 && !selectedAccount.value) {
+    if (newConnectedBanks.length > 0 && accounts.value.length > 0 && !selectedAccount.value && accounts.value[0]) {
       selectedAccount.value = accounts.value[0]
       handleAccountChange(accounts.value[0])
     }
   },
-  { deep: true }
+  { deep: true },
 )
 </script>

@@ -1,4 +1,3 @@
-<!-- src/components/charts/LineChart.vue -->
 <template>
   <div class="chart-container">
     <canvas ref="chartCanvas"></canvas>
@@ -7,7 +6,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, onUnmounted } from 'vue'
-import { Chart, registerables } from 'chart.js'
+import { Chart, registerables, type ChartOptions } from 'chart.js'
 
 Chart.register(...registerables)
 
@@ -24,7 +23,7 @@ interface Props {
       tension?: number
     }[]
   }
-  options?: any
+  options?: ChartOptions<'line'>
 }
 
 const props = defineProps<Props>()
@@ -51,7 +50,7 @@ const defaultOptions = {
     y: {
       beginAtZero: true,
       ticks: {
-        callback: function(value: any) {
+        callback: function(value: string | number) {
           return value.toLocaleString('ru-RU') + ' ₽'
         }
       }
