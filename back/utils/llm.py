@@ -29,5 +29,4 @@ async def ask_ai(user_message: str, context: str = "") -> str:
 
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print(f"❌ Ошибка при обращении к AI: {e}")
         return "Извини, не удалось получить ответ от AI. Попробуй позже 🙏"

@@ -226,7 +226,6 @@ async def connect_bank(bank: str, user=Depends(get_current_user)):
 @router.get("/{bank}/status")
 async def get_bank_status(bank: str, user=Depends(get_current_user)):
     """Проверяет статус согласия в банке и синхронизирует с БД"""
-    print("🔥 [DEBUG] get_bank_status START", bank)
     if bank not in BANK_URLS:
         raise HTTPException(status_code=400, detail="Неверный банк")
 
@@ -236,7 +235,6 @@ async def get_bank_status(bank: str, user=Depends(get_current_user)):
             (bank_consents.c.bank_name == bank)
         )
     )
-    print("🔥 [DEBUG] found record:", record)
     if not record:
         return {
             "bank": bank,
