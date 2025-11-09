@@ -58,6 +58,8 @@ export const useAuthStore = defineStore('auth', () => {
       isAuthenticated.value = true
       error.value = ''
       await fetchProfile()
+      await chatStore.loadHistory()
+
       await router.push('/')
     } catch (e: unknown) {
       const message = parseApiError(e)
@@ -73,8 +75,8 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (e) {
       console.warn('Ошибка выхода', e)
     } finally {
-      const chatStore = useChatStore()
-      chatStore.resetOnLogout()
+      // const chatStore = useChatStore()
+      // chatStore.resetOnLogout()
 
       await forceLogout();
     }
@@ -122,10 +124,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const forceLogout = async () => {
-    const chatStore = useChatStore()
+    // const chatStore = useChatStore()
     const accountStore = useAccountStore()
 
-    chatStore.resetOnLogout()
+    // chatStore.resetOnLogout()
     accountStore.$reset()
 
     $reset()
@@ -146,6 +148,15 @@ export const useAuthStore = defineStore('auth', () => {
       isInitialized.value = true
     }
   }
+  const getAuthState = () => {
+    return {
+      user: user.value,
+      isAuthenticated: isAuthenticated.value,
+      isInitialized: isInitialized.value,
+      isLoggedIn: isLoggedIn.value,
+      userId: user.value?.id
+    }
+  }
 
   return {
     user,
@@ -160,6 +171,7 @@ export const useAuthStore = defineStore('auth', () => {
     refreshAccessToken,
     $reset,
     makeAuthRequest,
-    initAuth
+    initAuth,
+    getAuthState,
   }
 })

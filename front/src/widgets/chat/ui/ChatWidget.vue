@@ -53,7 +53,7 @@
 
         <CardContent class="pb-3 px-3 flex-1 overflow-hidden">
           <!-- Сообщения -->
-          <div class="h-48 overflow-y-auto space-y-3">
+          <div class="h-48 overflow-y-auto space-y-3" ref="messagesContainer">
             <div
               v-for="message in chatStore.messages"
               :key="message.id"
@@ -97,6 +97,7 @@
               placeholder="Введите сообщение..."
               class="flex-1 text-sm"
               :disabled="!chatStore.isPremiumUser || chatStore.isLoading"
+              @focus="scrollToBottom"
             />
             <Button
               type="submit"
@@ -113,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -123,14 +124,45 @@ import { useChatStore } from '@/store/ChatStore.ts'
 
 const chatStore = useChatStore()
 const newMessage = ref('')
+const messagesContainer = ref<HTMLElement>() // 🔥 Ссылка на контейнер сообщений
+
+// 🔥 Функция прокрутки вниз
+const scrollToBottom = () => {
+  if (messagesContainer.value) {
+    // Ждем следующего тика, чтобы DOM обновился
+    nextTick(() => {
+      messagesContainer.value!.scrollTop = messagesContainer.value!.scrollHeight
+    })
+  }
+}
+
+// 🔥 Прокрутка при открытии чата
+const toggleChat = () => {
+  chatStore.toggleChat()
+
+  // Если чат открывается, прокручиваем вниз
+  if (chatStore.isOpen) {
+    // Даем время на анимацию открытия
+    setTimeout(() => {
+      scrollToBottom()
+    }, 300)
+  }
+}
+
+// 🔥 Прокрутка при изменении сообщений
+watch(
+  () => chatStore.messages.length,
+  () => {
+    if (chatStore.isOpen) {
+      scrollToBottom()
+    }
+  },
+  { deep: true }
+)
 
 const handleBankChange = (event: Event) => {
   const target = event.target as HTMLSelectElement
   chatStore.setSelectedBank(target.value)
-}
-
-const toggleChat = () => {
-  chatStore.toggleChat()
 }
 
 const sendMessage = async () => {
